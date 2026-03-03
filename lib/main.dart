@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_084/features/onboarding/onboarding_view.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Tambahkan ini
+import 'package:logbook_app_084/services/mongo_service.dart'; // Pastikan path benar
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await dotenv.load(fileName: ".env");
+    final mongoService = MongoService();
+    await mongoService.connect(); // Pastikan koneksi Atlas berhasil
+  } catch (e) {
+    debugPrint("Koneksi gagal: $e"); // Gunakan debugPrint agar tidak melanggar linting
+  }
+
   runApp(const MyApp());
 }
 

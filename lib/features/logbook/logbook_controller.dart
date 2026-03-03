@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/log_model.dart';
+import 'package:mongo_dart/mongo_dart.dart'; 
 
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
@@ -27,6 +28,7 @@ class LogController {
   
   void addLog(String title, String desc, String category) {
     final newLog = LogModel(
+      id: ObjectId(),
       title: title, 
       description: desc, 
       date: DateTime.now().toString(),
@@ -40,6 +42,7 @@ class LogController {
   void updateLog(int index, String title, String desc, String category) {
     final currentLogs = List<LogModel>.from(logsNotifier.value);
     currentLogs[index] = LogModel(
+      id: ObjectId(),
       title: title, 
       description: desc, 
       date: DateTime.now().toString(),

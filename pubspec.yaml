@@ -20,7 +20,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   
   # Library untuk format tanggal dan waktu pada LogHelper [cite: 233, 234]
-  intl: 0.20.2
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

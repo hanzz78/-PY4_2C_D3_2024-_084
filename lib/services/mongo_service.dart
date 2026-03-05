@@ -61,18 +61,24 @@ class MongoService {
 }
 
   // Ambil data (Read) dengan konversi ke List<LogModel>
-  Future<List<LogModel>> getLogs() async {
-    try {
-      if (_collection == null) return [];
-      final data = await _collection!.find().toList();
-      
-      // Proses Deserialization: Mengubah data mentah (Map) ke objek model
-      return data.map((item) => LogModel.fromMap(item)).toList();
-    } catch (e) {
-      print("Error getLogs: $e");
-      return [];
+Future<List<LogModel>> getLogs() async {
+  try {
+    // 1. Cek apakah database sudah terhubung dan terbuka
+    if (_db == null || !_db!.isConnected) {
+      print("DATABASE: Tidak ada koneksi aktif, mencoba hubungkan kembali...");
+      await connect(); // Coba connect ulang jika putus
     }
+
+    if (_collection == null) return [];
+    
+    final data = await _collection!.find().toList();
+    return data.map((item) => LogModel.fromMap(item)).toList();
+  } catch (e) {
+    // 2. Jika gagal karena offline, lempar error agar ditangkap FutureBuilder
+    print("Error getLogs: $e");
+    throw Exception("Koneksi internet bermasalah"); 
   }
+}
 
   // Simpan data (Create)
 Future<void> insertLog(Map<String, dynamic> data) async {

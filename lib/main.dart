@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_084/features/onboarding/onboarding_view.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Tambahkan ini
-import 'package:logbook_app_084/services/mongo_service.dart'; // Pastikan path benar
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logbook_app_084/services/mongo_service.dart';
+import 'package:intl/date_symbol_data_local.dart'; // Tambahkan ini
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Inisialisasi format tanggal bahasa Indonesia
+  await initializeDateFormatting('id', null);
+
   try {
     await dotenv.load(fileName: ".env");
     final mongoService = MongoService();
-    await mongoService.connect(); // Pastikan koneksi Atlas berhasil
+    await mongoService.connect(); 
   } catch (e) {
-    debugPrint("Koneksi gagal: $e"); // Gunakan debugPrint agar tidak melanggar linting
+    debugPrint("Koneksi gagal: $e");
   }
 
   runApp(const MyApp());
@@ -27,6 +31,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
       ),
       home: const OnboardingView(),
     );

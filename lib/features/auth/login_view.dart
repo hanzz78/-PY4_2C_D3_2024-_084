@@ -31,9 +31,23 @@ class _LoginViewState extends State<LoginView> {
     }
 
     if (_controller.login(user, pass)) {
+      // SIMULASI DATA USER (Nanti di Modul 6 diambil dari DB) [cite: 83, 138]
+      // Kita tentukan role dan teamId berdasarkan username untuk testing [cite: 100]
+      String role = (user.toLowerCase() == 'admin' || user.toLowerCase() == 'raihan') 
+          ? 'Ketua' 
+          : 'Anggota';
+      
+      // Navigasi dengan membawa identitas lengkap [cite: 149, 217]
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LogbookView(username: user)),
+        MaterialPageRoute(
+          builder: (context) => LogbookView(
+            username: user,
+            userId: "USER_${user.toUpperCase()}", // ID Unik User [cite: 188]
+            teamId: "MEKTRA_KLP_01",              // ID Kelompok [cite: 68, 190]
+            // Note: Tambahkan parameter role jika LogbookView kamu membutuhkannya nanti
+          ),
+        ),
       );
     } else {
       if (_controller.isLocked) {    

@@ -1,36 +1,71 @@
-import 'package:mongo_dart/mongo_dart.dart';
+import 'package:hive/hive.dart';
+import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
 
+part 'log_model.g.dart'; 
+
+@HiveType(typeId: 0) 
 class LogModel {
-  final ObjectId id; // Menggunakan ObjectId sesuai standar MongoDB
+  @HiveField(0)
+  final String? id;
+
+  @HiveField(1)
   final String title;
-  final String date;
+
+  @HiveField(2)
   final String description;
+
+  @HiveField(3)
+  final String date;
+
+  @HiveField(4)
+  final String authorId; 
+
+  @HiveField(5)
+  final String teamId; 
+
+  @HiveField(6)
+  final bool isSynced;
+
+  @HiveField(7)
   final String category;
 
+  @HiveField(8)
+  final bool isPublic;
+
   LogModel({
-    required this.id,
+    this.id,
     required this.title,
-    required this.date,
     required this.description,
-    required this.category,
+    required this.date,
+    required this.authorId,
+    required this.teamId,
+    this.isSynced = false,
+    this.category = 'Umum',
+    this.isPublic = false, // TASK 5: Default Private
   });
+
+  Map<String, dynamic> toMap() => {
+    '_id': id != null ? ObjectId.fromHexString(id!) : ObjectId(),
+    'title': title,
+    'description': description,
+    'date': date,
+    'authorId': authorId,
+    'teamId': teamId,
+    'category': category,
+    'isPublic': isPublic,
+  };
 
   factory LogModel.fromMap(Map<String, dynamic> map) {
     return LogModel(
-      id: map['_id'] as ObjectId,
-      title: map['title'],
-      date: map['date'],
-      description: map['description'],
-      category: map['category'] ??'Pribadi',
+      id: (map['_id'] as ObjectId?)?.oid,
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      date: map['date'] ?? '',
+      authorId: map['authorId'] ?? 'unknown_user',
+      teamId: map['teamId'] ?? 'no_team',
+      isSynced: map['isSynced'] is bool ? map['isSynced'] : true,
+      category: map['category'] ?? 'Umum',
+      isPublic: map['isPublic'] is bool ? map['isPublic'] : false, // HOTS logic
     );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'date': date,
-      'description': description,
-      'category' : category,
-    };
   }
 }

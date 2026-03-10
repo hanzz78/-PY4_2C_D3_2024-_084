@@ -2,20 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:logbook_app_084/features/onboarding/onboarding_view.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logbook_app_084/services/mongo_service.dart';
-import 'package:intl/date_symbol_data_local.dart'; // Tambahkan ini
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:hive_flutter/hive_flutter.dart'; 
+import 'package:logbook_app_084/features/logbook/models/log_model.dart'; 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inisialisasi format tanggal bahasa Indonesia
   await initializeDateFormatting('id', null);
 
   try {
+    // 1. Load Env
     await dotenv.load(fileName: ".env");
-    final mongoService = MongoService();
-    await mongoService.connect(); 
+
+    // 2. Inisialisasi Hive
+    await Hive.initFlutter();
+    
+    // 3. Registrasi Adapter
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(LogModelAdapter()); 
+    }
+
+    // 4. Buka Box dengan pengecekan ekstra
+    if (!Hive.isBoxOpen('offline_logs')) {
+      await Hive.openBox<LogModel>('offline_logs');
+    }
+    debugPrint("HIVE: Box 'offline_logs' berhasil dibuka.");
+
+    // 5. Hubungkan ke MongoDB Atlas (Kita buat non-blocking agar UI cepat nyala)
+    MongoService().connect().catchError((e) {
+      debugPrint("MONGODB ERROR: $e");
+    });
+    
   } catch (e) {
-    debugPrint("Koneksi gagal: $e");
+    debugPrint("INISIALISASI UTAMA ERROR: $e");
   }
 
   runApp(const MyApp());

@@ -36,6 +36,37 @@ class _LogbookViewState extends State<LogbookView> {
     _controller.loadLogs(widget.teamId);
   }
 
+  // --- HOMEWORK: Color Coding Logic ---
+  Color _getHomeworkColor(String category) {
+    switch (category) {
+      case 'Mechanical': return Colors.green.shade600;
+      case 'Electronic': return Colors.blue.shade600;
+      case 'Software': return Colors.purple.shade600;
+      default: return Colors.grey;
+    }
+  }
+
+  // --- HOMEWORK: Informative Empty State ---
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 80, color: Colors.indigo.withOpacity(0.1)),
+          const SizedBox(height: 16),
+          const Text(
+            "Belum ada aktivitas hari ini?",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
+          const Text(
+            "Mulai catat kemajuan proyek Anda!",
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmLogout() {
     showDialog(
       context: context,
@@ -57,38 +88,6 @@ class _LogbookViewState extends State<LogbookView> {
             child: const Text("Keluar"),
           ),
         ],
-      ),
-    );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'Progress': return Colors.blue;
-      case 'Kendala': return Colors.red;
-      case 'Rapat': return Colors.orange;
-      default: return Colors.grey;
-    }
-  }
-
-  Widget _buildStatCard(String label, int count, Color color) {
-    return Expanded(
-      child: Card(
-        elevation: 0,
-        color: color.withOpacity(0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: color.withOpacity(0.3)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Column(
-            children: [
-              Text(count.toString(), 
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-              Text(label, style: TextStyle(fontSize: 10, color: color.withOpacity(0.8))),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -117,62 +116,39 @@ class _LogbookViewState extends State<LogbookView> {
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () => _controller.loadLogs(widget.teamId)),
           IconButton(icon: const Icon(Icons.logout_rounded), onPressed: _confirmLogout), 
         ],
       ),
       body: Column(
         children: [
-          // 1. STATISTIK (Sesuai Task 5: Hanya menghitung yang boleh dilihat)
-          ValueListenableBuilder<List<LogModel>>(
-            valueListenable: _controller.logsNotifier,
-            builder: (context, logs, _) {
-              final visibleLogs = logs.where((l) => (l.authorId == widget.userId) || (l.isPublic == true));
-              int progress = visibleLogs.where((l) => l.category == 'Progress').length;
-              int kendala = visibleLogs.where((l) => l.category == 'Kendala').length;
-              int rapat = visibleLogs.where((l) => l.category == 'Rapat').length;
-
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    _buildStatCard("Progress", progress, Colors.blue),
-                    const SizedBox(width: 8),
-                    _buildStatCard("Kendala", kendala, Colors.red),
-                    const SizedBox(width: 8),
-                    _buildStatCard("Rapat", rapat, Colors.orange),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          // 2. SEARCH BAR
+          // 1. SMART SEARCH
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
-                hintText: "Cari judul...",
-                prefixIcon: const Icon(Icons.search),
+                hintText: "Cari judul atau deskripsi...",
+                prefixIcon: const Icon(Icons.search, color: Colors.indigo),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
             ),
           ),
 
-          // 3. FILTER CHIPS
+          // 2. FILTER CHIPS
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
-              children: ["Semua", "Progress", "Kendala", "Rapat", "Umum"].map((cat) {
+              children: ["Semua", "Mechanical", "Electronic", "Software"].map((cat) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: Text(cat),
+                    label: Text(cat, style: TextStyle(color: _filterCategory == cat ? Colors.white : Colors.black87)),
                     selected: _filterCategory == cat,
+                    selectedColor: Colors.indigo,
                     onSelected: (selected) => setState(() => _filterCategory = cat),
                   ),
                 );
@@ -182,133 +158,137 @@ class _LogbookViewState extends State<LogbookView> {
           
           const SizedBox(height: 8),
 
-          // 4. LIST (TASK 5 HOTS LOGIC)
+          // 3. LIST LOGBOOK
           Expanded(
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.logsNotifier,
               builder: (context, currentLogs, child) {
                 final filteredLogs = currentLogs.where((log) {
-                  // HINT 2: VISIBILITY LOGIC (Saya adalah Pemilik ATAU Catatan Publik)
-                  bool canSee = (log.authorId == widget.userId) || (log.isPublic == true);
-
-                  bool matchesSearch = log.title.toLowerCase().contains(_searchQuery);
+                  bool matchesSearch = log.title.toLowerCase().contains(_searchQuery) ||
+                                       log.description.toLowerCase().contains(_searchQuery);
                   bool matchesCategory = _filterCategory == "Semua" || log.category == _filterCategory;
+                  bool canSee = (log.authorId == widget.userId) || (log.isPublic == true);
                   
                   return canSee && matchesSearch && matchesCategory;
                 }).toList();
 
                 if (filteredLogs.isEmpty) {
-                  return const Center(child: Text("Data Kosong atau Tidak Ditemukan"));
+                  return _buildEmptyState();
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: filteredLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = filteredLogs[index];
-                    final bool isOwner = log.authorId == widget.userId;
-                    
-                    // HINT 3: SOVEREIGNTY (Hanya pemilik yang boleh edit/hapus)
-                    bool canAction = isOwner; 
+                return RefreshIndicator(
+                  onRefresh: () => _controller.loadLogs(widget.teamId),
+                  color: Colors.indigo,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: filteredLogs.length,
+                    itemBuilder: (context, index) {
+                      final log = filteredLogs[index];
+                      final bool isOwner = log.authorId == widget.userId;
 
-                    return Dismissible(
-                      key: Key(log.id ?? index.toString()),
-                      // Matikan swipe jika bukan owner
-                      direction: canAction ? DismissDirection.endToStart : DismissDirection.none,
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text("Hapus Catatan"),
-                            content: const Text("Hapus permanen data milik Anda?"),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                onPressed: () => Navigator.pop(context, true), 
-                                child: const Text("Hapus", style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      onDismissed: (direction) => _controller.removeLog(index, userRole, widget.userId),
-                      background: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                        decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(12)),
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(Icons.delete_sweep, color: Colors.white, size: 30),
-                      ),
-                      child: Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 2,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: log.isSynced ? Colors.green.shade50 : Colors.orange.shade50,
-                            child: Icon(
-                              log.isSynced ? Icons.cloud_done : Icons.cloud_upload_outlined,
-                              color: log.isSynced ? Colors.green : Colors.orange,
-                              size: 20,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(child: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold))),
-                              if (!log.isPublic) const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
-                              const SizedBox(width: 5),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _getCategoryColor(log.category).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(log.category, style: TextStyle(fontSize: 10, color: _getCategoryColor(log.category), fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(log.description, maxLines: 1, overflow: TextOverflow.ellipsis),
-                              const SizedBox(height: 4),
-                              Text(_formatDateTime(log.date), style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                            ],
-                          ),
-                          // HINT UI: Tombol edit muncul HANYA jika isOwner == true
-                          trailing: canAction ? const Icon(Icons.edit_note, color: Colors.indigo) : null,
-                          onTap: () {
-                            // Anggota lain/Ketua tetap bisa klik untuk LIHAT (View Only di Editor)
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => LogEditorPage(
-                                  log: log,
-                                  index: index,
-                                  controller: _controller,
-                                  currentUser: {
-                                    'uid': widget.userId,
-                                    'teamId': widget.teamId,
-                                    'username': widget.username,
-                                  },
-                                ),
-                              ),
-                            );
-                          },
+                      return Dismissible(
+                        key: Key(log.id ?? index.toString()),
+                        direction: isOwner ? DismissDirection.endToStart : DismissDirection.none,
+                        // FIX: Tambahkan dialog konfirmasi hapus
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text("Konfirmasi Hapus"),
+                                content: const Text("Apakah Anda yakin ingin menghapus catatan ini secara permanen?"),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text("BATAL"),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text("HAPUS", style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        onDismissed: (direction) => _controller.removeLog(index, userRole, widget.userId),
+                        background: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                          decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(12)),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(Icons.delete_sweep, color: Colors.white, size: 30),
                         ),
-                      ),
-                    );
-                  },
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: _getHomeworkColor(log.category), width: 1),
+                          ),
+                          elevation: 2,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: CircleAvatar(
+                              backgroundColor: log.isSynced ? Colors.green.shade50 : Colors.orange.shade50,
+                              child: Icon(
+                                log.isSynced ? Icons.cloud_done : Icons.cloud_upload_outlined,
+                                color: log.isSynced ? Colors.green : Colors.orange,
+                                size: 24,
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Expanded(child: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold))),
+                                if (!log.isPublic) const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+                              ],
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(log.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text(log.category, 
+                                      style: TextStyle(fontSize: 10, color: _getHomeworkColor(log.category), fontWeight: FontWeight.bold)),
+                                    const Text(" • ", style: TextStyle(color: Colors.grey)),
+                                    Text(_formatDateTime(log.date), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            trailing: isOwner ? const Icon(Icons.edit_note, color: Colors.indigo) : null,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => LogEditorPage(
+                                    log: log,
+                                    index: index,
+                                    controller: _controller,
+                                    currentUser: {
+                                      'uid': widget.userId,
+                                      'teamId': widget.teamId,
+                                      'username': widget.username,
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
@@ -322,7 +302,8 @@ class _LogbookViewState extends State<LogbookView> {
         },
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text("Catat Progress"),
       ),
     );
   }

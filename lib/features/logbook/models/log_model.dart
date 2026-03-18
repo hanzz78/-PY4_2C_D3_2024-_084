@@ -40,8 +40,8 @@ class LogModel {
     required this.authorId,
     required this.teamId,
     this.isSynced = false,
-    this.category = 'Umum',
-    this.isPublic = false, // TASK 5: Default Private
+    this.category = 'Software', // Default Homework
+    this.isPublic = false, 
   });
 
   Map<String, dynamic> toMap() => {
@@ -64,8 +64,8 @@ class LogModel {
       authorId: map['authorId'] ?? 'unknown_user',
       teamId: map['teamId'] ?? 'no_team',
       isSynced: map['isSynced'] is bool ? map['isSynced'] : true,
-      category: map['category'] ?? 'Umum',
-      isPublic: map['isPublic'] is bool ? map['isPublic'] : false, // HOTS logic
+      category: map['category'] ?? 'Software', 
+      isPublic: map['isPublic'] is bool ? map['isPublic'] : false,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:mongo_dart/mongo_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../helpers/log_helper.dart';
 import '../features/logbook/models/log_model.dart'; 
+import 'dart:async';
 
 class MongoService {
   static final MongoService _instance = MongoService._internal();
@@ -25,7 +26,11 @@ class MongoService {
       if (dbUri == null) throw Exception("MONGODB_URI tidak ditemukan di .env");
 
       _db = await Db.create(dbUri);
-      await _db!.open();
+      
+      // FIX TC08: Tambahkan Timeout 10 detik agar aplikasi tidak hang
+      await _db!.open().timeout(const Duration(seconds: 10), onTimeout: () {
+        throw Exception("Koneksi Timeout: MongoDB Atlas tidak merespon.");
+      });
       
       _collection = _db!.collection('logs');
       await LogHelper.writeLog("DATABASE: Terhubung ke MongoDB Atlas", source: _source, level: 2);
@@ -51,7 +56,6 @@ class MongoService {
     }
   }
 
-  // FIX: Sekarang status privasi (isPublic) ikut tersimpan ke Cloud
   Future<void> updateLog(ObjectId id, Map<String, dynamic> data) async {
     try {
       await _ensureConnected();
@@ -65,7 +69,7 @@ class MongoService {
             'authorId': data['authorId'],
             'teamId': data['teamId'],
             'category': data['category'],
-            'isPublic': data['isPublic'], // BARIS INI WAJIB ADA!
+            'isPublic': data['isPublic'],
           }
         },
       );

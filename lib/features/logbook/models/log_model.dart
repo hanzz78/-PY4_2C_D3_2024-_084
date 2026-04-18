@@ -32,6 +32,10 @@ class LogModel {
   @HiveField(8)
   final bool isPublic;
 
+  // --- TAMBAHAN BARU: Field untuk menyimpan lokasi foto lokal ---
+  @HiveField(9)
+  final String? imagePath;
+
   LogModel({
     this.id,
     required this.title,
@@ -42,6 +46,7 @@ class LogModel {
     this.isSynced = false,
     this.category = 'Software', // Default Homework
     this.isPublic = false, 
+    this.imagePath, // Ditambahkan di constructor
   });
 
   Map<String, dynamic> toMap() => {
@@ -53,6 +58,7 @@ class LogModel {
     'teamId': teamId,
     'category': category,
     'isPublic': isPublic,
+    'imagePath': imagePath, // Ditambahkan ke Map
   };
 
   factory LogModel.fromMap(Map<String, dynamic> map) {
@@ -66,6 +72,7 @@ class LogModel {
       isSynced: map['isSynced'] is bool ? map['isSynced'] : true,
       category: map['category'] ?? 'Software', 
       isPublic: map['isPublic'] is bool ? map['isPublic'] : false,
+      imagePath: map['imagePath'], // Diambil dari Map
     );
   }
 }

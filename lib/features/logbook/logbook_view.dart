@@ -1,11 +1,16 @@
+import 'dart:io'; 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:path_provider/path_provider.dart';
+
 import 'logbook_controller.dart'; 
 import 'log_editor_page.dart'; 
 import 'models/log_model.dart';
 import '../auth/login_view.dart';
-import '../../services/access_control_service.dart';
+import '../vision/vision_view.dart'; 
+// TAMBAHAN WAJIB: Import halaman Lab PCD yang baru kita buat
+import '../vision/pcd_editor_view.dart'; 
 
 class LogbookView extends StatefulWidget {
   final String username;
@@ -36,7 +41,6 @@ class _LogbookViewState extends State<LogbookView> {
     _controller.loadLogs(widget.teamId);
   }
 
-  // --- HOMEWORK: Color Coding Logic ---
   Color _getHomeworkColor(String category) {
     switch (category) {
       case 'Mechanical': return Colors.green.shade600;
@@ -46,7 +50,6 @@ class _LogbookViewState extends State<LogbookView> {
     }
   }
 
-  // --- HOMEWORK: Informative Empty State ---
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -116,12 +119,39 @@ class _LogbookViewState extends State<LogbookView> {
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.logout_rounded), onPressed: _confirmLogout), 
+          // FIX: UBAH TOMBOL INI UNTUK MEMBUKA LAB PCD
+          IconButton(
+            icon: const Icon(Icons.science), // Ikon tabung reaksi untuk Lab
+            tooltip: 'Buka Laboratorium PCD',
+            onPressed: () async {
+              // 1. Buka kamera dan tunggu nama file kembaliannya
+              final String? returnedFileName = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const VisionView()),
+              );
+
+              // 2. Jika user memotret, rakit path lengkap dan buka Lab PCD
+              if (returnedFileName != null && context.mounted) {
+                final directory = await getApplicationDocumentsDirectory();
+                final fullPath = '${directory.path}/$returnedFileName';
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PcdEditorView(imagePath: fullPath),
+                  ),
+                );
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded), 
+            onPressed: _confirmLogout,
+          ), 
         ],
       ),
       body: Column(
         children: [
-          // 1. SMART SEARCH
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(
@@ -136,8 +166,6 @@ class _LogbookViewState extends State<LogbookView> {
               ),
             ),
           ),
-
-          // 2. FILTER CHIPS
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -155,10 +183,7 @@ class _LogbookViewState extends State<LogbookView> {
               }).toList(),
             ),
           ),
-          
           const SizedBox(height: 8),
-
-          // 3. LIST LOGBOOK
           Expanded(
             child: ValueListenableBuilder<List<LogModel>>(
               valueListenable: _controller.logsNotifier,
@@ -189,7 +214,6 @@ class _LogbookViewState extends State<LogbookView> {
                       return Dismissible(
                         key: Key(log.id ?? index.toString()),
                         direction: isOwner ? DismissDirection.endToStart : DismissDirection.none,
-                        // FIX: Tambahkan dialog konfirmasi hapus
                         confirmDismiss: (direction) async {
                           return await showDialog(
                             context: context,
@@ -229,14 +253,42 @@ class _LogbookViewState extends State<LogbookView> {
                           elevation: 2,
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            leading: CircleAvatar(
-                              backgroundColor: log.isSynced ? Colors.green.shade50 : Colors.orange.shade50,
-                              child: Icon(
-                                log.isSynced ? Icons.cloud_done : Icons.cloud_upload_outlined,
-                                color: log.isSynced ? Colors.green : Colors.orange,
-                                size: 24,
-                              ),
-                            ),
+                            leading: log.imagePath != null
+                              ? FutureBuilder<Directory>(
+                                  future: getApplicationDocumentsDirectory(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      final dynamicPath = File('${snapshot.data!.path}/${log.imagePath}');
+                                      if (dynamicPath.existsSync()) {
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.file(
+                                            dynamicPath,
+                                            width: 50,
+                                            height: 50,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    return CircleAvatar(
+                                      backgroundColor: log.isSynced ? Colors.green.shade50 : Colors.orange.shade50,
+                                      child: Icon(
+                                        log.isSynced ? Icons.cloud_done : Icons.cloud_upload_outlined,
+                                        color: log.isSynced ? Colors.green : Colors.orange,
+                                        size: 24,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : CircleAvatar(
+                                  backgroundColor: log.isSynced ? Colors.green.shade50 : Colors.orange.shade50,
+                                  child: Icon(
+                                    log.isSynced ? Icons.cloud_done : Icons.cloud_upload_outlined,
+                                    color: log.isSynced ? Colors.green : Colors.orange,
+                                    size: 24,
+                                  ),
+                                ),
                             title: Row(
                               children: [
                                 Expanded(child: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold))),

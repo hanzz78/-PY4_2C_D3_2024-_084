@@ -6,10 +6,24 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:hive_flutter/hive_flutter.dart'; 
 import 'package:logbook_app_084/features/logbook/models/log_model.dart'; 
 
+// 1. TAMBAHKAN IMPORT KAMERA DI SINI
+import 'package:camera/camera.dart'; 
+
+// 2. BUAT VARIABEL GLOBAL UNTUK LIST KAMERA
+List<CameraDescription> cameras = [];
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   await initializeDateFormatting('id', null);
+
+  // 3. INISIALISASI KAMERA (Wajib dilakukan sebelum masuk ke Hive/Mongo)
+  try {
+    cameras = await availableCameras();
+    debugPrint("CAMERA: ${cameras.length} kamera ditemukan.");
+  } on CameraException catch (e) {
+    debugPrint('CAMERA ERROR: ${e.code}\nMessage: ${e.description}');
+  }
 
   try {
     // 1. Load Env
@@ -29,7 +43,7 @@ Future<void> main() async {
     }
     debugPrint("HIVE: Box 'offline_logs' berhasil dibuka.");
 
-    // 5. Hubungkan ke MongoDB Atlas (Kita buat non-blocking agar UI cepat nyala)
+    // 5. Hubungkan ke MongoDB Atlas (Non-blocking)
     MongoService().connect().catchError((e) {
       debugPrint("MONGODB ERROR: $e");
     });

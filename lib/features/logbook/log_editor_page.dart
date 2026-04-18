@@ -1,7 +1,11 @@
+import 'dart:io'; 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart'; // Pastikan package ini sudah di pubspec.yaml
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:path_provider/path_provider.dart'; // TAMBAHAN WAJIB
+
 import 'models/log_model.dart';
 import 'logbook_controller.dart';
+import '../vision/vision_view.dart'; 
 
 class LogEditorPage extends StatefulWidget {
   final LogModel? log;
@@ -30,6 +34,8 @@ class _LogEditorPageState extends State<LogEditorPage> {
   
   bool _isPublic = false; 
   bool _isSaving = false;
+  
+  String? _selectedImagePath;
 
   @override
   void initState() {
@@ -39,7 +45,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
     _selectedCategory = widget.log?.category ?? 'Software';
     _isPublic = widget.log?.isPublic ?? false; 
     
-    // Sinkronisasi tab preview saat mengetik
+    _selectedImagePath = widget.log?.imagePath;
     _descController.addListener(() => setState(() {}));
   }
 
@@ -66,11 +72,13 @@ class _LogEditorPageState extends State<LogEditorPage> {
           _titleController.text, _descController.text,
           widget.currentUser['uid'], widget.currentUser['teamId'],
           category: _selectedCategory, isPublic: _isPublic,
+          imagePath: _selectedImagePath, 
         );
       } else {
         await widget.controller.updateLog(
           widget.index!, _titleController.text, _descController.text,
           category: _selectedCategory, isPublic: _isPublic,
+          imagePath: _selectedImagePath, 
         );
       }
       if (mounted) Navigator.pop(context);
@@ -91,7 +99,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.edit_note), text: "Editor"),
-              Tab(icon: Icon(Icons.remove_red_eye), text: "Preview"), // Sesuai permintaan modul
+              Tab(icon: Icon(Icons.remove_red_eye), text: "Preview"), 
             ],
           ),
           actions: [
@@ -103,11 +111,63 @@ class _LogEditorPageState extends State<LogEditorPage> {
         ),
         body: TabBarView(
           children: [
-            // TAB 1: EDITOR
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // FIX: DYNAMIC PATH RENDERER UNTUK PREVIEW
+                  if (_selectedImagePath != null)
+                    FutureBuilder<Directory>(
+                      future: getApplicationDocumentsDirectory(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          final dynamicPath = File('${snapshot.data!.path}/$_selectedImagePath');
+                          if (dynamicPath.existsSync()) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  dynamicPath,
+                                  height: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+
+                  if (isOwner)
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final String? returnedPath = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VisionView(),
+                          ),
+                        );
+
+                        if (returnedPath != null) {
+                          setState(() {
+                            _selectedImagePath = returnedPath;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.camera_alt, color: Colors.indigo),
+                      label: const Text("Buka Kamera Smart-Patrol"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Colors.indigo),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 20),
+
                   DropdownButtonFormField<String>(
                     value: _homeworkCats.contains(_selectedCategory) ? _selectedCategory : 'Software',
                     items: _homeworkCats.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
@@ -129,7 +189,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _descController, 
-                    maxLines: 15, 
+                    maxLines: 10, 
                     enabled: isOwner,
                     decoration: const InputDecoration(
                       labelText: "Isi Logbook (Markdown)", 
@@ -142,8 +202,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
               ),
             ),
             
-            // TAB 2: PREVIEW (Markdown Rendering - Poin Homework)
-            // Sesuai Instruksi: Menggunakan widget MarkdownBody
             SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Container(
